@@ -1,0 +1,142 @@
+{
+  "status": "ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED",
+  "analysis": "years_to_agreement",
+  "definition": "\"Agreement on basic life\" is interpreted as the model gap falling to <= threshold and holding for hold_years.",
+  "rates_are_guesses": true,
+  "real_world_agreement_year": null,
+  "real_world_agreement_year_reason": "Rates and noise are guesses, not measured from any real index. The model contains no consensus, consent, or voting mechanism.",
+  "scenarios": {
+    "base_defaults": {
+      "assumptions": {
+        "rate": 0.02,
+        "volatility": 0.0,
+        "setback_prob": 0.0,
+        "setback_size": 0.0,
+        "threshold": 0.01,
+        "years": 1000,
+        "runs": 2000,
+        "hold_years": 10,
+        "seed": 20261013
+      },
+      "median_year": 237,
+      "p10_year": 237,
+      "p90_year": 237,
+      "fraction_never_within_horizon": 0.0,
+      "quantiles_note": "Quantiles over successful paths only (censored)."
+    },
+    "leave_a_1_slow": {
+      "assumptions": {
+        "rate": 0.01,
+        "volatility": 0.0,
+        "setback_prob": 0.0,
+        "setback_size": 0.0,
+        "threshold": 0.01,
+        "years": 1000,
+        "runs": 2000,
+        "hold_years": 10,
+        "seed": 20261013
+      },
+      "median_year": 468,
+      "p10_year": 468,
+      "p90_year": 468,
+      "fraction_never_within_horizon": 0.0,
+      "quantiles_note": "Quantiles over successful paths only (censored)."
+    },
+    "leave_a_1_rate_0.02": {
+      "assumptions": {
+        "rate": 0.02,
+        "volatility": 0.0,
+        "setback_prob": 0.0,
+        "setback_size": 0.0,
+        "threshold": 0.01,
+        "years": 1000,
+        "runs": 2000,
+        "hold_years": 10,
+        "seed": 20261013
+      },
+      "median_year": 237,
+      "p10_year": 237,
+      "p90_year": 237,
+      "fraction_never_within_horizon": 0.0,
+      "quantiles_note": "Quantiles over successful paths only (censored)."
+    },
+    "leave_a_1_rate_0.05": {
+      "assumptions": {
+        "rate": 0.05,
+        "volatility": 0.0,
+        "setback_prob": 0.0,
+        "setback_size": 0.0,
+        "threshold": 0.01,
+        "years": 1000,
+        "runs": 2000,
+        "hold_years": 10,
+        "seed": 20261013
+      },
+      "median_year": 99,
+      "p10_year": 99,
+      "p90_year": 99,
+      "fraction_never_within_horizon": 0.0,
+      "quantiles_note": "Quantiles over successful paths only (censored)."
+    },
+    "noisy_rate_0.02": {
+      "assumptions": {
+        "rate": 0.02,
+        "volatility": 0.01,
+        "setback_prob": 0.02,
+        "setback_size": 0.03,
+        "threshold": 0.01,
+        "years": 1000,
+        "runs": 2000,
+        "hold_years": 10,
+        "seed": 20261013
+      },
+      "median_year": 403,
+      "p10_year": 267,
+      "p90_year": 712,
+      "fraction_never_within_horizon": 0.04400000000000004,
+      "quantiles_note": "Quantiles over successful paths only (censored)."
+    },
+    "noisy_rate_0.05": {
+      "assumptions": {
+        "rate": 0.05,
+        "volatility": 0.02,
+        "setback_prob": 0.05,
+        "setback_size": 0.05,
+        "threshold": 0.01,
+        "years": 1000,
+        "runs": 2000,
+        "hold_years": 10,
+        "seed": 20261013
+      },
+      "median_year": 261,
+      "p10_year": 123,
+      "p90_year": 616,
+      "fraction_never_within_horizon": 0.02400000000000002,
+      "quantiles_note": "Quantiles over successful paths only (censored)."
+    },
+    "harsh_rate_0.02": {
+      "assumptions": {
+        "rate": 0.02,
+        "volatility": 0.01,
+        "setback_prob": 0.05,
+        "setback_size": 0.05,
+        "threshold": 0.01,
+        "years": 1000,
+        "runs": 2000,
+        "hold_years": 10,
+        "seed": 20261013
+      },
+      "median_year": 622,
+      "p10_year": 402,
+      "p90_year": 952,
+      "fraction_never_within_horizon": 0.9725,
+      "quantiles_note": "Quantiles over successful paths only (censored)."
+    }
+  },
+  "limitations": [
+    "Years count from an arbitrary normalized start (D[0]=1), not from today.",
+    "Never-reached paths are censored at the horizon, not proven impossible.",
+    "\"Leave a 1\" is represented only as a higher annual rate (a guess).",
+    "No consensus mechanism or per-person outcome is modeled."
+  ]
+}

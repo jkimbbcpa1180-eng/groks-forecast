@@ -1,0 +1,326 @@
+{
+  "status": "ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED",
+  "analysis": "timeline_scenarios",
+  "start_year": 2026,
+  "horizon_years": 300,
+  "runs": 500,
+  "scenarios": {
+    "Peace + AI abundance": {
+      "median_agreement_year": 2120,
+      "fraction_never_within_horizon": 0.0,
+      "p10_p90_agreement_year_successful_only": [
+        2119,
+        2126
+      ],
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.01,
+        "s": 0.02,
+        "vol": 0.005,
+        "events": [
+          [
+            2040,
+            "AI basics near-free",
+            {
+              "rate": 0.05
+            }
+          ],
+          [
+            2045,
+            "Wealth tax",
+            {
+              "rate": 0.06,
+              "p": 0.005,
+              "s": 0.01
+            }
+          ]
+        ]
+      }
+    },
+    "Korean reunification (peaceful)": {
+      "median_agreement_year": 2231,
+      "fraction_never_within_horizon": 0.10199999999999998,
+      "p10_p90_agreement_year_successful_only": [
+        2192,
+        2288
+      ],
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": [
+          [
+            2045,
+            "Reunification",
+            {
+              "shock": 0.15,
+              "rate": 0.01
+            }
+          ],
+          [
+            2060,
+            "Integration done",
+            {
+              "rate": 0.035
+            }
+          ]
+        ]
+      }
+    },
+    "Great-power war": {
+      "median_agreement_year": null,
+      "fraction_never_within_horizon": 1.0,
+      "p10_p90_agreement_year_successful_only": null,
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": [
+          [
+            2050,
+            "War",
+            {
+              "shock": 0.6,
+              "rate": 0.012
+            }
+          ]
+        ]
+      }
+    },
+    "Nuclear exchange": {
+      "median_agreement_year": null,
+      "fraction_never_within_horizon": 1.0,
+      "p10_p90_agreement_year_successful_only": null,
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": [
+          [
+            2055,
+            "Nuclear",
+            {
+              "shock": 2.0,
+              "rate": 0.003,
+              "p": 0.05
+            }
+          ]
+        ]
+      }
+    },
+    "Climate failure": {
+      "median_agreement_year": null,
+      "fraction_never_within_horizon": 1.0,
+      "p10_p90_agreement_year_successful_only": null,
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": [
+          [
+            2050,
+            "Climate tipping",
+            {
+              "p_growth": 0.001
+            }
+          ]
+        ]
+      }
+    },
+    "Wealth concentration (Country of Kings)": {
+      "median_agreement_year": null,
+      "fraction_never_within_horizon": 1.0,
+      "p10_p90_agreement_year_successful_only": null,
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": [
+          [
+            2035,
+            "Kings entrench",
+            {
+              "rate": 0.008
+            }
+          ]
+        ]
+      }
+    },
+    "Status quo": {
+      "median_agreement_year": null,
+      "fraction_never_within_horizon": 0.786,
+      "p10_p90_agreement_year_successful_only": [
+        2266,
+        2320
+      ],
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": []
+      }
+    },
+    "Korean War peace treaty": {
+      "median_agreement_year": 2278,
+      "fraction_never_within_horizon": 0.27,
+      "p10_p90_agreement_year_successful_only": [
+        2222,
+        2309
+      ],
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": [
+          [
+            2035,
+            "Korean War peace treaty",
+            {
+              "p": 0.015,
+              "rate": 0.025
+            }
+          ]
+        ]
+      }
+    },
+    "Best path (all helpful events)": {
+      "median_agreement_year": 2126,
+      "fraction_never_within_horizon": 0.0,
+      "p10_p90_agreement_year_successful_only": [
+        2124,
+        2145
+      ],
+      "assumptions_are_guesses": {
+        "rate": 0.02,
+        "p": 0.02,
+        "s": 0.03,
+        "vol": 0.005,
+        "events": [
+          [
+            2035,
+            "Korean War peace treaty",
+            {
+              "p": 0.015
+            }
+          ],
+          [
+            2038,
+            "Pandemic early-warning treaty",
+            {
+              "s": 0.025
+            }
+          ],
+          [
+            2040,
+            "Open-source AI basics",
+            {
+              "rate": 0.035
+            }
+          ],
+          [
+            2045,
+            "Universal basic services",
+            {
+              "rate": 0.045
+            }
+          ],
+          [
+            2050,
+            "Global min. wealth/land tax",
+            {
+              "rate": 0.05
+            }
+          ],
+          [
+            2055,
+            "Honest, transparent government",
+            {
+              "p": 0.01
+            }
+          ],
+          [
+            2065,
+            "Fusion / clean-energy abundance",
+            {
+              "rate": 0.06,
+              "s": 0.015
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "helpful_events": [
+    {
+      "year_guess": 2035,
+      "event": "Korean War peace treaty",
+      "tp": 0.25,
+      "tp_is_judgment_not_data": true,
+      "lever": "p,s",
+      "why": "Guess. Korea-US-China (and Japan) formally end the 1953 armistice; lowers war risk."
+    },
+    {
+      "year_guess": 2038,
+      "event": "Pandemic early-warning treaty",
+      "tp": 0.5,
+      "tp_is_judgment_not_data": true,
+      "lever": "p,s",
+      "why": "Guess. Faster detection shrinks pandemic shocks."
+    },
+    {
+      "year_guess": 2040,
+      "event": "Open-source AI basics",
+      "tp": 0.35,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Guess. Food/energy/housing designs as a public good, so gains are shared."
+    },
+    {
+      "year_guess": 2045,
+      "event": "Universal basic services",
+      "tp": 0.3,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Guess. Turns cheaper basics into guaranteed basics."
+    },
+    {
+      "year_guess": 2050,
+      "event": "Global min. wealth/land tax",
+      "tp": 0.15,
+      "tp_is_judgment_not_data": true,
+      "lever": "r,s",
+      "why": "Guess. Hard to coordinate; reverses Country-of-Kings erosion."
+    },
+    {
+      "year_guess": 2055,
+      "event": "Honest, transparent government",
+      "tp": 0.3,
+      "tp_is_judgment_not_data": true,
+      "lever": "r,p",
+      "why": "Guess. Less corruption makes gains stick."
+    },
+    {
+      "year_guess": 2065,
+      "event": "Fusion / clean-energy abundance",
+      "tp": 0.3,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Guess. Commercial fusion is unproven; cheap renewables already exist."
+    }
+  ],
+  "verified_facts": [
+    {
+      "fact": "South Korea National Assembly Budget Office (2016) estimated 2,316-4,822 trillion won (~USD 2.0-4.1 trillion) to raise North Korean per-capita income to two-thirds of the South's after a peaceful 2026 reunification, taking 34-50 years.",
+      "source": "https://english.hani.co.kr/arti/english_edition/e_northkorea/721551.html"
+    }
+  ],
+  "real_world_tp": null,
+  "real_world_tp_reason": "Rates, shocks and event years are guesses; the model has no consensus mechanism."
+}

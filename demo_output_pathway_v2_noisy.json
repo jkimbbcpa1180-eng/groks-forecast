@@ -1,0 +1,158 @@
+{
+  "status": "ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED",
+  "analysis": "pathway",
+  "assumptions": {
+    "rate": 0.05,
+    "volatility": 0.0,
+    "setback_prob": 0.05,
+    "setback_size": 0.05,
+    "threshold": 0.01,
+    "years": 500,
+    "runs": 2000,
+    "hold_years": 10,
+    "seed": 20261013
+  },
+  "formula": {
+    "recurrence": "D_{t+1} = (1 - r) D_t + s_t",
+    "time_to_agreement": "T ~ ln(threshold) / ln(1 - r) + hold_years",
+    "T_approx": 99.78113496070975,
+    "T_exact_integer": 99,
+    "T_simulated_no_noise": 99,
+    "approx_vs_sim_note": "Approx is ~1 year high: hold counts the first below-threshold year.",
+    "setback_condition": "progress beats setbacks while r*D > p*s",
+    "steady_state_gap_D_star": 0.05000000000000001,
+    "D_star_below_threshold": false
+  },
+  "conditions": [
+    {
+      "condition": "raise_r_to_about_5pct",
+      "tp": 0.35,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Each generation must pass on gains (leave a 1) far faster than today; plausible only with sustained cheap energy and AI productivity."
+    },
+    {
+      "condition": "fewer_smaller_setbacks",
+      "tp": 0.3,
+      "tp_is_judgment_not_data": true,
+      "lever": "p,s",
+      "why": "Wars, pandemics and climate shocks keep recurring; cutting both their frequency and size for a century is historically rare."
+    },
+    {
+      "condition": "reverse_wealth_concentration",
+      "tp": 0.25,
+      "tp_is_judgment_not_data": true,
+      "lever": "r,s",
+      "why": "Top-decile shares have been rising (e.g. Korea 46.1% in 2025); reversal needs political will against entrenched owners."
+    },
+    {
+      "condition": "ai_makes_basics_near_free",
+      "tp": 0.45,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Energy cost declines are real (solar -90% since 2010); food, housing and care are harder, and gains may be captured by owners."
+    },
+    {
+      "condition": "freely_chosen_agreement",
+      "tp": null,
+      "tp_is_judgment_not_data": true,
+      "lever": "none",
+      "why": "Unmeasurable: no index exists for genuine, uncoerced agreement, and the model has no consensus mechanism."
+    }
+  ],
+  "overall_judgment": {
+    "tp_range": [
+      0.15,
+      0.25
+    ],
+    "horizon_years": 150,
+    "tp_is_judgment_not_data": true,
+    "note": "Not a product of the rows above; conditions are correlated."
+  },
+  "events_rough_order": [
+    {
+      "event": "Clean energy becomes the cheapest power almost everywhere",
+      "tp": 0.8,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Already true for most new projects per IRENA 2024 (verified); cheap energy lowers the cost of every basic need."
+    },
+    {
+      "event": "No great-power war or nuclear use this century",
+      "tp": 0.7,
+      "tp_is_judgment_not_data": true,
+      "lever": "p,s",
+      "why": "Guess. 12,241 warheads exist (SIPRI 2025, verified); one nuclear war is a huge setback s."
+    },
+    {
+      "event": "Global pandemic preparedness (fast vaccines, early warning)",
+      "tp": 0.55,
+      "tp_is_judgment_not_data": true,
+      "lever": "p,s",
+      "why": "Guess. COVID-19 showed vaccines can come within a year, but readiness is uneven."
+    },
+    {
+      "event": "AI sharply cuts the cost of food, energy and housing construction",
+      "tp": 0.45,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Guess. Automation of farming and building is early; housing is limited by land and rules."
+    },
+    {
+      "event": "Climate stabilization, net zero by ~2070",
+      "tp": 0.35,
+      "tp_is_judgment_not_data": true,
+      "lever": "p,s",
+      "why": "Guess. Emissions have not yet fallen globally; failure raises shock frequency."
+    },
+    {
+      "event": "Open-source or public ownership of key AI and automation",
+      "tp": 0.35,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Guess. Decides whether near-free basics reach everyone or stay with owners."
+    },
+    {
+      "event": "Universal basic floor (UBI or basic services) in major economies",
+      "tp": 0.3,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Guess. Only pilots so far; turns lower costs into guaranteed basics."
+    },
+    {
+      "event": "Land/wealth taxes that cut top-decile wealth shares",
+      "tp": 0.25,
+      "tp_is_judgment_not_data": true,
+      "lever": "r,s",
+      "why": "Guess. Few countries tax wealth; ties to \"A Country of Kings\"."
+    },
+    {
+      "event": "Education and honesty norms spread (Real Mode culture)",
+      "tp": 0.4,
+      "tp_is_judgment_not_data": true,
+      "lever": "r",
+      "why": "Guess. Slow, generational; makes gains stick and lowers relapse."
+    }
+  ],
+  "verified_facts": [
+    {
+      "fact": "Utility-scale solar PV global weighted-average LCOE fell from USD 0.417/kWh (2010) to USD 0.043/kWh (2024), about -90%; battery storage fell 93% since 2010 to USD 192/kWh.",
+      "source": "https://www.irena.org/Publications/2025/Jun/Renewable-Power-Generation-Costs-in-2024"
+    },
+    {
+      "fact": "About 12,241 nuclear warheads existed in Jan 2025 (9,614 in military stockpiles, ~2,100 on high alert); SIPRI expects stockpiles may soon start growing again.",
+      "source": "https://www.sipri.org/yearbook/2025/06"
+    },
+    {
+      "fact": "South Korea, end-March 2025: top 10% of households hold 46.1% of net assets, bottom 50% hold 9.1%; net-asset Gini 0.625.",
+      "source": "https://www.koreatimes.co.kr/southkorea/society/20251204/koreas-wealth-gap-hits-record-on-surging-assets-of-top-earners"
+    }
+  ],
+  "real_world_tp": null,
+  "real_world_tp_reason": "All tp values are judgments; rates are guesses; the model has no consensus mechanism.",
+  "limitations": [
+    "Levers map to r, p, s qualitatively; no fitted coefficients.",
+    "Event tps are not independent and must not be multiplied.",
+    "Freely chosen agreement cannot be measured or modeled here."
+  ]
+}

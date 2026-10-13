@@ -1,0 +1,635 @@
+#!/usr/bin/env python3
+"""Scenario wrappers v2 around realmode_future_decency (NOT forecasts).
+
+Changes from v1:
+  * One shared path function, run_path(), is used for BOTH the hold
+    condition and the ceiling. A self-check (check_matches_simulate) proves
+    that run_path() reproduces simulate()'s success fraction exactly at the
+    same seed, so the two cannot silently diverge without a test failing.
+    (The base file is unchanged; simulate() has no per-path hook, so
+    run_path() mirrors its RNG draw order: gauss only if volatility > 0,
+    then one random() per year, update D=(1-r)D+s.)
+  * peak_gap is the max over years 1..T (the starting value 1.0 is not
+    counted), so a ceiling below 1.0 is meaningful.
+  * ceiling validated: finite and > threshold.
+  * New 'agreement' subcommand: years to the hold condition (illustrative).
+  * New 'pathway' subcommand: formula, D*, judgment conditions and events.
+  * New 'timeline' subcommand: named calendar-year scenarios (decency_chart.py plots them).
+  * Unused _grid removed. Sweep accepts --runs and warns on stderr with the
+    cell count.
+
+Honesty: status flags, None for real-world claims, limitation lists kept.
+Wealth concentration and "global agreement" remain UNMODELED.
+Standard library only. JSON to stdout.
+"""
+from __future__ import annotations
+
+import argparse
+import itertools
+import json
+import math
+import random
+import sys
+import unittest
+from dataclasses import asdict, replace
+from statistics import mean
+
+from realmode_future_decency import (Assumptions, deterministic_years,
+                                     simulate, wilson_interval)
+
+
+def run_path(a: Assumptions, rng: random.Random) -> tuple[int | None, float, float]:
+    """One path. Returns (first hold year or None, peak gap over years 1..T, final gap)."""
+    gap, streak, hit, peak = 1.0, 0, None, -math.inf
+    for year in range(1, a.years + 1):
+        rate = (a.rate if a.volatility == 0 else
+                min(1.0, max(0.0, rng.gauss(a.rate, a.volatility))))
+        shock = a.setback_size if rng.random() < a.setback_prob else 0.0
+        gap = (1.0 - rate) * gap + shock
+        peak = max(peak, gap)
+        streak = streak + 1 if gap <= a.threshold else 0
+        if hit is None and streak >= a.hold_years:
+            hit = year
+    return hit, peak, gap
+
+
+def run_paths(a: Assumptions) -> list[tuple[int | None, float, float]]:
+    a.validate()
+    rng = random.Random(a.seed)
+    return [run_path(a, rng) for _ in range(a.runs)]
+
+
+def check_matches_simulate(a: Assumptions) -> bool:
+    paths = run_paths(a)
+    s = simulate(a)
+    return (sum(h is not None for h, _, _ in paths) == s['successful_paths']
+            and math.isclose(mean(g for _, _, g in paths), s['mean_final_gap'],
+                             rel_tol=0, abs_tol=1e-12))
+
+
+def universality_bound(a: Assumptions, ceiling: float) -> dict:
+    """Fraction of paths meeting hold condition AND never exceeding ceiling
+    in years 1..T. Aggregate model property only; nothing per-person."""
+    a.validate()
+    if not math.isfinite(ceiling) or ceiling <= a.threshold:
+        raise ValueError('ceiling must be finite and greater than threshold')
+    paths = run_paths(a)
+    n = a.runs
+    hold = sum(h is not None for h, _, _ in paths)
+    below = sum(p <= ceiling for _, p, _ in paths)
+    both = sum(h is not None and p <= ceiling for h, p, _ in paths)
+    return {
+        'status': 'ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED',
+        'analysis': 'universality_bound',
+        'version': 2,
+        'ceiling': ceiling,
+        'assumptions': asdict(a),
+        'fraction_meeting_hold_condition': hold / n,
+        'fraction_never_exceeding_ceiling': below / n,
+        'fraction_meeting_both': both / n,
+        'both_sampling_interval_95_only': wilson_interval(both, n),
+        'mean_peak_gap_years_1_to_T': mean(p for _, p, _ in paths),
+        'real_world_universal_agreement': None,
+        'real_world_universal_agreement_reason': (
+            'No consensus mechanism, consent model, power asymmetry, '
+            'or per-person outcome is represented. An aggregate path '
+            'bound is not evidence that every person is safe or agrees.'),
+        'limitations': [
+            'Aggregate proxy only; says nothing about the worst-off person.',
+            'Peak-gap bound is a model artifact, not a moral guarantee.',
+            'Ceiling is user-chosen; the number is conditional on that choice.',
+            'Peak excludes the normalized starting value D[0] = 1.',
+            'Unsuccessful paths are censored at the horizon, not proven impossible.',
+            'No birth, migration, interdependence, or political feedback modeled.',
+            'No compulsory catastrophe or morally cleansing disaster is modeled.',
+        ],
+    }
+
+
+def sensitivity_sweep(base: Assumptions, rates, setback_probs,
+                      setback_sizes, volatilities) -> dict:
+    cells = []
+    for r, sp, ss, v in itertools.product(rates, setback_probs,
+                                          setback_sizes, volatilities):
+        cell = {'rate': r, 'setback_prob': sp, 'setback_size': ss, 'volatility': v}
+        try:
+            out = simulate(replace(base, rate=r, setback_prob=sp,
+                                   setback_size=ss, volatility=v))
+            cell['success_fraction'] = out['conditional_simulation_success_fraction']
+            cell['sampling_interval_95_only'] = out['simulation_sampling_interval_95_only']
+        except ValueError as e:
+            cell['error'] = str(e)
+        cells.append(cell)
+    ok = [c for c in cells if 'error' not in c]
+    return {
+        'status': 'ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED',
+        'analysis': 'sensitivity_sweep',
+        'version': 2,
+        'base_assumptions': asdict(base),
+        'grid_sizes': {'rate': len(rates), 'setback_prob': len(setback_probs),
+                       'setback_size': len(setback_sizes),
+                       'volatility': len(volatilities)},
+        'total_cells': len(cells),
+        'invalid_cells': len(cells) - len(ok),
+        'cells_permitting_hold_condition': sum(c['success_fraction'] > 0 for c in ok),
+        'cells_never_permitting_hold_condition': sum(c['success_fraction'] == 0 for c in ok),
+        'cells': cells,
+        'real_world_tp': None,
+        'real_world_tp_reason': (
+            'Grid values are illustrative ranges chosen for exploration, '
+            'not fitted or validated against any measured index.'),
+        'limitations': [
+            'Grid boundaries are user-chosen and shape the apparent result.',
+            'Independent annual draws are a simplifying assumption.',
+            'No parameter uncertainty is propagated; only sampling error.',
+            'A cell with success_fraction = 0 is not proof of impossibility.',
+            'No consensus, consent, or per-person outcome is modeled.',
+        ],
+    }
+
+
+AGREEMENT_SCENARIOS = [
+    # (label, kwargs) -- ALL rates/noise are GUESSES, not measured.
+    ('base_defaults', {}),
+    ('leave_a_1_slow', dict(rate=0.01)),
+    ('leave_a_1_rate_0.02', dict(rate=0.02)),
+    ('leave_a_1_rate_0.05', dict(rate=0.05)),
+    ('noisy_rate_0.02', dict(rate=0.02, volatility=0.01, setback_prob=0.02, setback_size=0.03)),
+    ('noisy_rate_0.05', dict(rate=0.05, volatility=0.02, setback_prob=0.05, setback_size=0.05)),
+    ('harsh_rate_0.02', dict(rate=0.02, volatility=0.01, setback_prob=0.05, setback_size=0.05)),
+]
+
+
+def _q(ordered: list[int], q: float) -> int | None:
+    return ordered[max(0, math.ceil(q * len(ordered)) - 1)] if ordered else None
+
+
+def years_to_agreement(a: Assumptions) -> dict:
+    """Distribution of the first year the hold condition is met.
+    'Agreement on basic life' = model gap <= threshold for hold_years.
+    There is NO consensus mechanism; this is a gap-index proxy only."""
+    paths = run_paths(a)
+    hits = sorted(h for h, _, _ in paths if h is not None)
+    return {
+        'assumptions': asdict(a),
+        'median_year': _q(hits, 0.5), 'p10_year': _q(hits, 0.1),
+        'p90_year': _q(hits, 0.9),
+        'fraction_never_within_horizon': 1 - len(hits) / a.runs,
+        'quantiles_note': 'Quantiles over successful paths only (censored).',
+    }
+
+
+def agreement_report(scenarios=AGREEMENT_SCENARIOS, **common) -> dict:
+    return {
+        'status': 'ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED',
+        'analysis': 'years_to_agreement',
+        'definition': ('"Agreement on basic life" is interpreted as the model gap '
+                       'falling to <= threshold and holding for hold_years.'),
+        'rates_are_guesses': True,
+        'real_world_agreement_year': None,
+        'real_world_agreement_year_reason': (
+            'Rates and noise are guesses, not measured from any real index. '
+            'The model contains no consensus, consent, or voting mechanism.'),
+        'scenarios': {lab: years_to_agreement(Assumptions(**{**common, **kw}))
+                      for lab, kw in scenarios},
+        'limitations': [
+            'Years count from an arbitrary normalized start (D[0]=1), not from today.',
+            'Never-reached paths are censored at the horizon, not proven impossible.',
+            '"Leave a 1" is represented only as a higher annual rate (a guess).',
+            'No consensus mechanism or per-person outcome is modeled.',
+        ],
+    }
+
+
+# ---------------------------------------------------------------- pathway
+
+VERIFIED_FACTS = [
+    {'fact': 'Utility-scale solar PV global weighted-average LCOE fell from '
+             'USD 0.417/kWh (2010) to USD 0.043/kWh (2024), about -90%; battery '
+             'storage fell 93% since 2010 to USD 192/kWh.',
+     'source': 'https://www.irena.org/Publications/2025/Jun/Renewable-Power-Generation-Costs-in-2024'},
+    {'fact': 'About 12,241 nuclear warheads existed in Jan 2025 (9,614 in '
+             'military stockpiles, ~2,100 on high alert); SIPRI expects '
+             'stockpiles may soon start growing again.',
+     'source': 'https://www.sipri.org/yearbook/2025/06'},
+    {'fact': 'South Korea, end-March 2025: top 10% of households hold 46.1% '
+             'of net assets, bottom 50% hold 9.1%; net-asset Gini 0.625.',
+     'source': 'https://www.koreatimes.co.kr/southkorea/society/20251204/koreas-wealth-gap-hits-record-on-surging-assets-of-top-earners'},
+]
+
+CONDITIONS = [
+    ('raise_r_to_about_5pct', 0.35, 'r',
+     'Each generation must pass on gains (leave a 1) far faster than today; '
+     'plausible only with sustained cheap energy and AI productivity.'),
+    ('fewer_smaller_setbacks', 0.30, 'p,s',
+     'Wars, pandemics and climate shocks keep recurring; cutting both their '
+     'frequency and size for a century is historically rare.'),
+    ('reverse_wealth_concentration', 0.25, 'r,s',
+     'Top-decile shares have been rising (e.g. Korea 46.1% in 2025); reversal '
+     'needs political will against entrenched owners.'),
+    ('ai_makes_basics_near_free', 0.45, 'r',
+     'Energy cost declines are real (solar -90% since 2010); food, housing and '
+     'care are harder, and gains may be captured by owners.'),
+    ('freely_chosen_agreement', None, 'none',
+     'Unmeasurable: no index exists for genuine, uncoerced agreement, and the '
+     'model has no consensus mechanism.'),
+]
+
+EVENTS = [
+    ('Clean energy becomes the cheapest power almost everywhere', 0.80, 'r',
+     'Already true for most new projects per IRENA 2024 (verified); cheap '
+     'energy lowers the cost of every basic need.'),
+    ('No great-power war or nuclear use this century', 0.70, 'p,s',
+     'Guess. 12,241 warheads exist (SIPRI 2025, verified); one nuclear war is '
+     'a huge setback s.'),
+    ('Global pandemic preparedness (fast vaccines, early warning)', 0.55, 'p,s',
+     'Guess. COVID-19 showed vaccines can come within a year, but readiness is uneven.'),
+    ('AI sharply cuts the cost of food, energy and housing construction', 0.45, 'r',
+     'Guess. Automation of farming and building is early; housing is limited by land and rules.'),
+    ('Climate stabilization, net zero by ~2070', 0.35, 'p,s',
+     'Guess. Emissions have not yet fallen globally; failure raises shock frequency.'),
+    ('Open-source or public ownership of key AI and automation', 0.35, 'r',
+     'Guess. Decides whether near-free basics reach everyone or stay with owners.'),
+    ('Universal basic floor (UBI or basic services) in major economies', 0.30, 'r',
+     'Guess. Only pilots so far; turns lower costs into guaranteed basics.'),
+    ('Land/wealth taxes that cut top-decile wealth shares', 0.25, 'r,s',
+     'Guess. Few countries tax wealth; ties to "A Country of Kings".'),
+    ('Education and honesty norms spread (Real Mode culture)', 0.40, 'r',
+     'Guess. Slow, generational; makes gains stick and lowers relapse.'),
+]
+
+
+def pathway(a: Assumptions) -> dict:
+    a.validate()
+    det = deterministic_years(a.rate, a.threshold)
+    approx = (math.log(a.threshold) / math.log1p(-a.rate) + a.hold_years
+              if 0 < a.rate < 1 else None)
+    exact = det + a.hold_years - 1 if det is not None else None
+    sim = simulate(replace(a, volatility=0.0, setback_prob=0.0,
+                           setback_size=0.0, runs=1))
+    sim_year = sim['completion_year_quantiles_successful_paths_only']['p50']
+    d_star = a.setback_prob * a.setback_size / a.rate if a.rate > 0 else None
+    return {
+        'status': 'ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED',
+        'analysis': 'pathway',
+        'assumptions': asdict(a),
+        'formula': {
+            'recurrence': 'D_{t+1} = (1 - r) D_t + s_t',
+            'time_to_agreement': 'T ~ ln(threshold) / ln(1 - r) + hold_years',
+            'T_approx': approx,
+            'T_exact_integer': exact,
+            'T_simulated_no_noise': sim_year,
+            'approx_vs_sim_note': 'Approx is ~1 year high: hold counts the first below-threshold year.',
+            'setback_condition': 'progress beats setbacks while r*D > p*s',
+            'steady_state_gap_D_star': d_star,
+            'D_star_below_threshold': (d_star < a.threshold) if d_star is not None else None,
+        },
+        'conditions': [
+            {'condition': c, 'tp': tp, 'tp_is_judgment_not_data': True,
+             'lever': lev, 'why': why} for c, tp, lev, why in CONDITIONS],
+        'overall_judgment': {
+            'tp_range': [0.15, 0.25], 'horizon_years': 150,
+            'tp_is_judgment_not_data': True,
+            'note': 'Not a product of the rows above; conditions are correlated.'},
+        'events_rough_order': [
+            {'event': e, 'tp': tp, 'tp_is_judgment_not_data': True,
+             'lever': lev, 'why': why} for e, tp, lev, why in EVENTS],
+        'verified_facts': VERIFIED_FACTS,
+        'real_world_tp': None,
+        'real_world_tp_reason': ('All tp values are judgments; rates are guesses; '
+                                 'the model has no consensus mechanism.'),
+        'limitations': [
+            'Levers map to r, p, s qualitatively; no fitted coefficients.',
+            'Event tps are not independent and must not be multiplied.',
+            'Freely chosen agreement cannot be measured or modeled here.',
+        ],
+    }
+
+
+# ---------------------------------------------------------------- timeline scenarios
+
+START_YEAR = 2026
+REUNIFICATION_COST_FACT = {
+    'fact': ('South Korea National Assembly Budget Office (2016) estimated '
+             '2,316-4,822 trillion won (~USD 2.0-4.1 trillion) to raise North '
+             'Korean per-capita income to two-thirds of the South\'s after a '
+             'peaceful 2026 reunification, taking 34-50 years.'),
+    'source': 'https://english.hani.co.kr/arti/english_edition/e_northkorea/721551.html',
+}
+
+# Every number below is a GUESS. Events: (calendar_year, label, changes)
+# changes may include 'shock' (one-time add to D) and new 'rate', 'p', 's',
+# 'vol', or 'p_growth' (per-year additive rise in setback probability).
+TIMELINE_SCENARIOS = {
+    'Peace + AI abundance': dict(rate=0.02, p=0.01, s=0.02, vol=0.005, events=[
+        (2040, 'AI basics near-free', {'rate': 0.05}),
+        (2045, 'Wealth tax', {'rate': 0.06, 'p': 0.005, 's': 0.01})]),
+    'Korean reunification (peaceful)': dict(rate=0.02, p=0.02, s=0.03, vol=0.005, events=[
+        (2045, 'Reunification', {'shock': 0.15, 'rate': 0.01}),
+        (2060, 'Integration done', {'rate': 0.035})]),
+    'Great-power war': dict(rate=0.02, p=0.02, s=0.03, vol=0.005, events=[
+        (2050, 'War', {'shock': 0.6, 'rate': 0.012})]),
+    'Nuclear exchange': dict(rate=0.02, p=0.02, s=0.03, vol=0.005, events=[
+        (2055, 'Nuclear', {'shock': 2.0, 'rate': 0.003, 'p': 0.05})]),
+    'Climate failure': dict(rate=0.02, p=0.02, s=0.03, vol=0.005, events=[
+        (2050, 'Climate tipping', {'p_growth': 0.001})]),
+    'Wealth concentration (Country of Kings)': dict(rate=0.02, p=0.02, s=0.03, vol=0.005, events=[
+        (2035, 'Kings entrench', {'rate': 0.008})]),
+    'Status quo': dict(rate=0.02, p=0.02, s=0.03, vol=0.005, events=[]),
+}
+
+
+# Helpful events (year guess, label, tp JUDGMENT, lever, why, model change)
+HELPFUL_EVENTS = [
+    (2035, 'Korean War peace treaty', 0.25, 'p,s',
+     'Guess. Korea-US-China (and Japan) formally end the 1953 armistice; lowers war risk.',
+     {'p': 0.015}),
+    (2038, 'Pandemic early-warning treaty', 0.50, 'p,s',
+     'Guess. Faster detection shrinks pandemic shocks.', {'s': 0.025}),
+    (2040, 'Open-source AI basics', 0.35, 'r',
+     'Guess. Food/energy/housing designs as a public good, so gains are shared.',
+     {'rate': 0.035}),
+    (2045, 'Universal basic services', 0.30, 'r',
+     'Guess. Turns cheaper basics into guaranteed basics.', {'rate': 0.045}),
+    (2050, 'Global min. wealth/land tax', 0.15, 'r,s',
+     'Guess. Hard to coordinate; reverses Country-of-Kings erosion.', {'rate': 0.05}),
+    (2055, 'Honest, transparent government', 0.30, 'r,p',
+     'Guess. Less corruption makes gains stick.', {'p': 0.01}),
+    (2065, 'Fusion / clean-energy abundance', 0.30, 'r',
+     'Guess. Commercial fusion is unproven; cheap renewables already exist.',
+     {'rate': 0.06, 's': 0.015}),
+]
+TIMELINE_SCENARIOS['Korean War peace treaty'] = dict(
+    rate=0.02, p=0.02, s=0.03, vol=0.005, events=[(2035, 'Korean War peace treaty', {'p': 0.015, 'rate': 0.025})])
+TIMELINE_SCENARIOS['Best path (all helpful events)'] = dict(
+    rate=0.02, p=0.02, s=0.03, vol=0.005,
+    events=[(y, l, ch) for y, l, _, _, _, ch in HELPFUL_EVENTS])
+
+
+def run_timeline(spec: dict, years: int = 300, runs: int = 500,
+                 seed: int = 20261013, threshold: float = 0.01,
+                 hold_years: int = 10) -> dict:
+    """Monte Carlo of a time-varying version of D_{t+1}=(1-r)D_t+s_t.
+    ILLUSTRATIVE: every rate, shock and event year is a guess."""
+    rng = random.Random(seed)
+    ev = {y: ch for y, _, ch in spec['events']}
+    paths, hits = [], []
+    for _ in range(runs):
+        r, p, s, v, pg = spec['rate'], spec['p'], spec['s'], spec['vol'], 0.0
+        gap, streak, hit, path = 1.0, 0, None, []
+        for t in range(1, years + 1):
+            yr = START_YEAR + t
+            ch = ev.get(yr)
+            if ch:
+                gap += ch.get('shock', 0.0)
+                r = ch.get('rate', r); p = ch.get('p', p); s = ch.get('s', s)
+                v = ch.get('vol', v); pg = ch.get('p_growth', pg)
+            p = min(1.0, p + pg)
+            rt = r if v == 0 else min(1.0, max(0.0, rng.gauss(r, v)))
+            gap = (1.0 - rt) * gap + (s if rng.random() < p else 0.0)
+            path.append(gap)
+            streak = streak + 1 if gap <= threshold else 0
+            if hit is None and streak >= hold_years:
+                hit = yr
+        paths.append(path); hits.append(hit)
+    cols = list(zip(*paths))
+    def q(col, f):
+        o = sorted(col); return o[max(0, math.ceil(f * len(o)) - 1)]
+    ok = sorted(h for h in hits if h is not None)
+    never = 1 - len(ok) / runs
+    return {
+        'years': [START_YEAR + t for t in range(1, years + 1)],
+        'median': [q(c, 0.5) for c in cols],
+        'p10': [q(c, 0.1) for c in cols], 'p90': [q(c, 0.9) for c in cols],
+        'median_agreement_year': (q(hits_sorted := [h if h is not None else math.inf for h in hits], 0.5)
+                                  if never < 0.5 else None),
+        'fraction_never_within_horizon': never,
+        'p10_p90_agreement_year_successful_only': [q(ok, 0.1), q(ok, 0.9)] if ok else None,
+    }
+
+
+def timeline_report(years: int = 300, runs: int = 500) -> dict:
+    out = {}
+    for name, spec in TIMELINE_SCENARIOS.items():
+        r = run_timeline(spec, years, runs)
+        out[name] = {k: r[k] for k in ('median_agreement_year',
+                     'fraction_never_within_horizon',
+                     'p10_p90_agreement_year_successful_only')}
+        out[name]['assumptions_are_guesses'] = {k: v for k, v in spec.items()}
+    return {
+        'status': 'ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED',
+        'analysis': 'timeline_scenarios',
+        'start_year': START_YEAR, 'horizon_years': years, 'runs': runs,
+        'scenarios': out,
+        'helpful_events': [{'year_guess': y, 'event': l, 'tp': tp,
+                            'tp_is_judgment_not_data': True, 'lever': lv, 'why': w}
+                           for y, l, tp, lv, w, _ in HELPFUL_EVENTS],
+        'verified_facts': [REUNIFICATION_COST_FACT],
+        'real_world_tp': None,
+        'real_world_tp_reason': ('Rates, shocks and event years are guesses; '
+                                 'the model has no consensus mechanism.'),
+    }
+
+
+class Tests(unittest.TestCase):
+    CASES = [Assumptions(years=300, runs=200),
+             Assumptions(years=300, runs=200, volatility=0.01,
+                         setback_prob=0.02, setback_size=0.03),
+             Assumptions(rate=0.05, years=200, runs=200, setback_prob=0.05,
+                         setback_size=0.02, volatility=0.005)]
+
+    def test_run_path_matches_simulate(self):
+        for a in self.CASES:
+            self.assertTrue(check_matches_simulate(a), a)
+
+    def test_hold_fraction_equals_simulate(self):
+        for a in self.CASES:
+            self.assertEqual(universality_bound(a, 1.0)['fraction_meeting_hold_condition'],
+                             simulate(a)['conditional_simulation_success_fraction'])
+
+    def test_ceiling_below_one_can_pass(self):
+        a = Assumptions(years=300, runs=5)
+        self.assertEqual(universality_bound(a, 0.99)['fraction_meeting_both'], 1.0)
+        self.assertEqual(universality_bound(a, 0.97)['fraction_never_exceeding_ceiling'], 0.0)
+
+    def test_setback_breaks_ceiling(self):
+        a = Assumptions(rate=0, setback_prob=1, setback_size=0.1, years=10, runs=3)
+        self.assertEqual(universality_bound(a, 1.0)['fraction_never_exceeding_ceiling'], 0.0)
+
+    def test_ceiling_validation(self):
+        for c in (0, -1, 0.01, 0.005, float('nan'), float('inf')):
+            with self.assertRaises(ValueError):
+                universality_bound(Assumptions(years=20, runs=2), c)
+
+    def test_both_le_parts(self):
+        out = universality_bound(self.CASES[1], 1.0)
+        self.assertLessEqual(out['fraction_meeting_both'],
+                             min(out['fraction_meeting_hold_condition'],
+                                 out['fraction_never_exceeding_ceiling']))
+
+    def test_sweep_counts_and_invalid(self):
+        out = sensitivity_sweep(Assumptions(years=100, runs=5),
+                                [0.05, 1.5], [0.0], [0.0], [0.0])
+        self.assertEqual(out['total_cells'], 2)
+        self.assertEqual(out['invalid_cells'], 1)
+        self.assertEqual(out['cells_permitting_hold_condition'], 1)
+
+    def test_honesty_labels(self):
+        u = universality_bound(Assumptions(years=20, runs=2), 1.0)
+        s = sensitivity_sweep(Assumptions(years=20, runs=2), [0.1], [0.0], [0.0], [0.0])
+        for d in (u, s):
+            self.assertEqual(d['status'], 'ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED')
+            self.assertTrue(d['limitations'])
+        self.assertIsNone(u['real_world_universal_agreement'])
+        self.assertIsNone(s['real_world_tp'])
+
+    def test_deterministic_seed(self):
+        a = self.CASES[1]
+        self.assertEqual(universality_bound(a, 1.0), universality_bound(a, 1.0))
+
+    def test_agreement_matches_simulate(self):
+        a = Assumptions(rate=0.05, volatility=0.02, setback_prob=0.05,
+                        setback_size=0.05, years=300, runs=200)
+        y = years_to_agreement(a)
+        q = simulate(a)['completion_year_quantiles_successful_paths_only']
+        self.assertEqual((y['p10_year'], y['median_year'], y['p90_year']),
+                         (q['p10'], q['p50'], q['p90']))
+
+    def test_agreement_deterministic_and_never(self):
+        self.assertEqual(years_to_agreement(Assumptions(rate=0.05, runs=3))['median_year'], 99)
+        y = years_to_agreement(Assumptions(rate=0, years=50, runs=3))
+        self.assertIsNone(y['median_year'])
+        self.assertEqual(y['fraction_never_within_horizon'], 1.0)
+
+    def test_higher_rate_faster(self):
+        f = years_to_agreement(Assumptions(rate=0.05, runs=2))['median_year']
+        s = years_to_agreement(Assumptions(rate=0.02, runs=2))['median_year']
+        self.assertLess(f, s)
+
+    def test_agreement_report_labels(self):
+        r = agreement_report(years=50, runs=2)
+        self.assertIsNone(r['real_world_agreement_year'])
+        self.assertTrue(r['rates_are_guesses'])
+        self.assertEqual(len(r['scenarios']), len(AGREEMENT_SCENARIOS))
+
+    def test_pathway_formula_matches_sim(self):
+        for r in (0.02, 0.05, 0.01):
+            f = pathway(Assumptions(rate=r))['formula']
+            self.assertEqual(f['T_exact_integer'], f['T_simulated_no_noise'])
+            self.assertLess(abs(f['T_approx'] - f['T_exact_integer']), 2)
+
+    def test_pathway_d_star(self):
+        f = pathway(Assumptions(rate=0.05, setback_prob=0.05, setback_size=0.05))['formula']
+        self.assertAlmostEqual(f['steady_state_gap_D_star'], 0.05)
+        self.assertFalse(f['D_star_below_threshold'])
+        f = pathway(Assumptions(rate=0.05, setback_prob=0.01, setback_size=0.02))['formula']
+        self.assertTrue(f['D_star_below_threshold'])
+
+    def test_pathway_labels(self):
+        p = pathway(Assumptions())
+        for row in p['conditions'] + p['events_rough_order']:
+            self.assertTrue(row['tp_is_judgment_not_data'])
+            self.assertTrue(row['why'])
+            self.assertTrue(set(row['lever'].split(',')) <= {'r', 'p', 's', 'none'})
+        self.assertIsNone([c for c in p['conditions']
+                           if c['condition'] == 'freely_chosen_agreement'][0]['tp'])
+        self.assertTrue(all(f['source'].startswith('https://') for f in p['verified_facts']))
+        self.assertIsNone(p['real_world_tp'])
+
+    def test_timeline_status_quo_matches_simulate(self):
+        spec = dict(rate=0.05, p=0.05, s=0.02, vol=0.005, events=[])
+        t = run_timeline(spec, years=200, runs=100)
+        sim = simulate(Assumptions(rate=0.05, setback_prob=0.05, setback_size=0.02,
+                                   volatility=0.005, years=200, runs=100))
+        self.assertAlmostEqual(1 - t['fraction_never_within_horizon'],
+                               sim['conditional_simulation_success_fraction'])
+
+    def test_timeline_shock_applies(self):
+        spec = dict(rate=0.0, p=0.0, s=0.0, vol=0.0,
+                    events=[(START_YEAR + 3, 'x', {'shock': 0.5})])
+        t = run_timeline(spec, years=5, runs=2)
+        self.assertEqual(t['median'][1], 1.0)
+        self.assertEqual(t['median'][2], 1.5)
+
+    def test_timeline_ordering(self):
+        r = timeline_report(years=300, runs=60)['scenarios']
+        peace = r['Peace + AI abundance']['median_agreement_year']
+        self.assertIsNotNone(peace)
+        self.assertIsNone(r['Nuclear exchange']['median_agreement_year'])
+        sq = r['Status quo']['median_agreement_year']
+        self.assertTrue(sq is None or peace < sq)
+        best = r['Best path (all helpful events)']['median_agreement_year']
+        self.assertIsNotNone(best)
+        self.assertTrue(all(0 < e[2] < 1 for e in HELPFUL_EVENTS))
+
+
+def _floats(s: str) -> list[float]:
+    return [float(x) for x in s.split(',') if x.strip()]
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest='cmd', required=True)
+    d = Assumptions()
+    ub = sub.add_parser('universality', help='#1 per-path bound')
+    ub.add_argument('--ceiling', type=float, default=1.0)
+    for name in ('rate', 'volatility', 'setback_prob', 'setback_size'):
+        ub.add_argument('--' + name.replace('_', '-'), type=float, default=getattr(d, name))
+    sw = sub.add_parser('sweep', help='#2 parameter grid')
+    sw.add_argument('--rates', type=_floats, default=[0.005, 0.01, 0.02, 0.05])
+    sw.add_argument('--setback-probs', type=_floats, default=[0.0, 0.01, 0.05])
+    sw.add_argument('--setback-sizes', type=_floats, default=[0.0, 0.02, 0.05])
+    sw.add_argument('--volatilities', type=_floats, default=[0.0, 0.005])
+    for sp in (ub, sw):
+        sp.add_argument('--threshold', type=float, default=d.threshold)
+        for name in ('years', 'runs', 'hold_years', 'seed'):
+            sp.add_argument('--' + name.replace('_', '-'), type=int, default=getattr(d, name))
+    ag = sub.add_parser('agreement', help='years-to-agreement scenarios')
+    for name in ('years', 'runs', 'hold_years', 'seed'):
+        ag.add_argument('--' + name.replace('_', '-'), type=int, default=getattr(d, name))
+    ag.add_argument('--threshold', type=float, default=d.threshold)
+    pw = sub.add_parser('pathway', help='formula, conditions, events (judgment)')
+    pw.add_argument('--rate', type=float, default=0.05)
+    for name in ('setback_prob', 'setback_size'):
+        pw.add_argument('--' + name.replace('_', '-'), type=float, default=getattr(d, name))
+    pw.add_argument('--threshold', type=float, default=d.threshold)
+    for name in ('years', 'runs', 'hold_years', 'seed'):
+        pw.add_argument('--' + name.replace('_', '-'), type=int, default=getattr(d, name))
+    sub.add_parser('timeline', help='named calendar-year scenarios (guesses)')
+    sub.add_parser('self-test')
+    args = p.parse_args()
+    if args.cmd == 'self-test':
+        r = unittest.TextTestRunner(verbosity=2).run(
+            unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+        raise SystemExit(0 if r.wasSuccessful() else 1)
+    if args.cmd == 'timeline':
+        print(json.dumps(timeline_report(), indent=2, allow_nan=False)); return
+    common = dict(threshold=args.threshold, years=args.years, runs=args.runs,
+                  hold_years=args.hold_years, seed=args.seed)
+    try:
+        if args.cmd == 'pathway':
+            out = pathway(Assumptions(rate=args.rate, setback_prob=args.setback_prob,
+                                      setback_size=args.setback_size, **common))
+        elif args.cmd == 'agreement':
+            out = agreement_report(**common)
+        elif args.cmd == 'universality':
+            out = universality_bound(Assumptions(
+                rate=args.rate, volatility=args.volatility,
+                setback_prob=args.setback_prob, setback_size=args.setback_size,
+                **common), args.ceiling)
+        else:
+            n = (len(args.rates) * len(args.setback_probs)
+                 * len(args.setback_sizes) * len(args.volatilities))
+            print(f'sweep: {n} cells x {args.runs} runs x {args.years} years',
+                  file=sys.stderr)
+            out = sensitivity_sweep(Assumptions(**common), args.rates,
+                                    args.setback_probs, args.setback_sizes,
+                                    args.volatilities)
+    except ValueError as e:
+        p.error(str(e))
+    print(json.dumps(out, indent=2, allow_nan=False))
+
+
+if __name__ == '__main__':
+    main()
