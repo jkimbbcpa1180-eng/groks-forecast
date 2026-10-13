@@ -14,6 +14,12 @@ The gap D shrinks by the improvement rate r and grows with setbacks s. If setbac
 - `decency_scenarios_v2.py`: universality bound, sensitivity sweep, years-to-agreement, pathway (formula, conditions, events) and timeline scenarios (`self-test` runs the tests)
 - `decency_chart.py`: draws the chart
 
+## Why most futures fail forever
+
+![Failure map](decency_failure_map.png)
+
+Each year, progress (r·D) shrinks as the gap gets smaller, while average harm (p·s) stays about the same. They meet at the stall point D* = p·s/r. If D* is above the 0.01 goal, that future never reaches agreement. The status quo stalls at about 3x the goal: harm cancels progress. The tp values (how likely each future is to be the one we live in) are judgments, not data.
+
 > We live life through 0s and 1s. Just make sure you leave a 1 for the next 0.
 
 Credit: humanity. Public domain (CC0).

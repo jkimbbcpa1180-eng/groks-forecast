@@ -366,6 +366,35 @@ TIMELINE_SCENARIOS['Best path (all helpful events)'] = dict(
     events=[(y, l, ch) for y, l, _, _, _, ch in HELPFUL_EVENTS])
 
 
+# tp that each scenario is the DOMINANT world we live in. JUDGMENT, not data.
+WORLD_TP = {
+    'Status quo': (0.40, 'Current trend: real progress, but recurring shocks keep cancelling it.'),
+    'Climate failure': (0.20, 'Global emissions have not yet fallen; setback frequency would rise.'),
+    'Wealth concentration (Country of Kings)': (0.15, 'Top shares rising (Korea top 10% = 46.1%, 2025).'),
+    'Great-power war': (0.10, 'US-China rivalry and arms build-up make it plausible, not likely.'),
+    'Korean War peace treaty': (0.05, 'Talks have failed repeatedly since the 1953 armistice.'),
+    'Nuclear exchange': (0.03, 'About 12,241 warheads exist (SIPRI 2025); use is rare but possible.'),
+    'Korean reunification (peaceful)': (0.03, 'No active path today; cost ~USD 2-4 trillion (NABO 2016).'),
+    'Peace + AI abundance': (0.02, 'Needs cheap basics AND sharing AND peace at once.'),
+    'Best path (all helpful events)': (0.02, 'Needs seven hard reforms to all succeed.'),
+}
+
+
+def final_params(spec: dict, at_year: int = 2100) -> dict:
+    """r, p, s after all events up to at_year (p_growth applied to at_year)."""
+    r, p, s, pg, since = spec['rate'], spec['p'], spec['s'], 0.0, None
+    for y, _, ch in sorted(spec['events'], key=lambda e: e[0]):
+        if y > at_year:
+            break
+        r = ch.get('rate', r); p = ch.get('p', p); s = ch.get('s', s)
+        if 'p_growth' in ch:
+            pg, since = ch['p_growth'], y
+    if pg and since is not None:
+        p = min(1.0, p + pg * (at_year - since + 1))
+    return {'r': r, 'p': p, 's': s, 'at_year': at_year,
+            'D_star': p * s / r if r > 0 else math.inf}
+
+
 def run_timeline(spec: dict, years: int = 300, runs: int = 500,
                  seed: int = 20261013, threshold: float = 0.01,
                  hold_years: int = 10) -> dict:
@@ -416,6 +445,12 @@ def timeline_report(years: int = 300, runs: int = 500) -> dict:
                      'fraction_never_within_horizon',
                      'p10_p90_agreement_year_successful_only')}
         out[name]['assumptions_are_guesses'] = {k: v for k, v in spec.items()}
+        fp = final_params(spec)
+        out[name]['steady_state_gap_D_star_2100'] = fp['D_star'] if math.isfinite(fp['D_star']) else None
+        tp, why = WORLD_TP[name]
+        out[name]['tp_dominant_world'] = tp
+        out[name]['tp_is_judgment_not_data'] = True
+        out[name]['tp_why'] = why
     return {
         'status': 'ILLUSTRATIVE_SCENARIO_NOT_EMPIRICALLY_CALIBRATED',
         'analysis': 'timeline_scenarios',
@@ -561,6 +596,14 @@ class Tests(unittest.TestCase):
         best = r['Best path (all helpful events)']['median_agreement_year']
         self.assertIsNotNone(best)
         self.assertTrue(all(0 < e[2] < 1 for e in HELPFUL_EVENTS))
+
+    def test_world_tp_and_d_star(self):
+        self.assertEqual(set(WORLD_TP), set(TIMELINE_SCENARIOS))
+        self.assertAlmostEqual(sum(t for t, _ in WORLD_TP.values()), 1.0)
+        self.assertAlmostEqual(final_params(TIMELINE_SCENARIOS['Status quo'])['D_star'], 0.03)
+        self.assertLess(final_params(TIMELINE_SCENARIOS['Best path (all helpful events)'])['D_star'], 0.01)
+        self.assertGreater(final_params(TIMELINE_SCENARIOS['Climate failure'], 2100)['D_star'],
+                           final_params(TIMELINE_SCENARIOS['Climate failure'], 2060)['D_star'])
 
 
 def _floats(s: str) -> list[float]:

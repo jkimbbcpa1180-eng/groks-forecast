@@ -35,7 +35,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.0008333333333333334,
+      "tp_dominant_world": 0.02,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "Needs cheap basics AND sharing AND peace at once."
     },
     "Korean reunification (peaceful)": {
       "median_agreement_year": 2231,
@@ -66,7 +70,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.01714285714285714,
+      "tp_dominant_world": 0.03,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "No active path today; cost ~USD 2-4 trillion (NABO 2016)."
     },
     "Great-power war": {
       "median_agreement_year": null,
@@ -87,7 +95,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.049999999999999996,
+      "tp_dominant_world": 0.1,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "US-China rivalry and arms build-up make it plausible, not likely."
     },
     "Nuclear exchange": {
       "median_agreement_year": null,
@@ -109,7 +121,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.5,
+      "tp_dominant_world": 0.03,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "About 12,241 warheads exist (SIPRI 2025); use is rare but possible."
     },
     "Climate failure": {
       "median_agreement_year": null,
@@ -129,7 +145,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.1065,
+      "tp_dominant_world": 0.2,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "Global emissions have not yet fallen; setback frequency would rise."
     },
     "Wealth concentration (Country of Kings)": {
       "median_agreement_year": null,
@@ -149,7 +169,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.075,
+      "tp_dominant_world": 0.15,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "Top shares rising (Korea top 10% = 46.1%, 2025)."
     },
     "Status quo": {
       "median_agreement_year": null,
@@ -164,7 +188,11 @@
         "s": 0.03,
         "vol": 0.005,
         "events": []
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.029999999999999995,
+      "tp_dominant_world": 0.4,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "Current trend: real progress, but recurring shocks keep cancelling it."
     },
     "Korean War peace treaty": {
       "median_agreement_year": 2278,
@@ -188,7 +216,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.018,
+      "tp_dominant_world": 0.05,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "Talks have failed repeatedly since the 1953 armistice."
     },
     "Best path (all helpful events)": {
       "median_agreement_year": 2126,
@@ -254,7 +286,11 @@
             }
           ]
         ]
-      }
+      },
+      "steady_state_gap_D_star_2100": 0.0025,
+      "tp_dominant_world": 0.02,
+      "tp_is_judgment_not_data": true,
+      "tp_why": "Needs seven hard reforms to all succeed."
     }
   },
   "helpful_events": [
